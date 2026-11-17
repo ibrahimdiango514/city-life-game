@@ -2,8 +2,9 @@
 
 ## 1. Vision et contraintes
 
-- Monde ouvert urbain **réaliste**, jouable dans le navigateur, évolutif vers un vrai rendu 3D.
-- Zéro asset binaire dans le dépôt pour le moment : tout est **procédural** (géométrie + textures canvas). Aucune dépendance de runtime autre que `three` et `@supabase/supabase-js`.
+- Monde ouvert urbain **réaliste**, jouable dans le navigateur.
+- Personnages : **modèles humains rigged glTF** locaux (voir `public/assets/ASSETS.md`) — plus aucun humanoïde procédural.
+- Textures d'environnement : procédurales (canvas). Aucune dépendance de runtime autre que `three` et `@supabase/supabase-js`.
 - Les modules métier purs (données de ville, collisions, horloge, math) sont **sans DOM** et couverts par des tests (`vitest`).
 
 ## 2. Choix structurants
@@ -17,18 +18,23 @@
 | **DOM pour le HUD** | Le HUD (menus, prompts, toasts) en DOM/CSS est plus net, accessible et moins coûteux en dev qu'un HUD WebGL. Le monde 3D reste 100 % canvas WebGL. |
 | **Caméra 3e personne orbitale** | Standard GTA-like : pointer lock, yaw/pitch amortis, zoom molette. |
 
-### 2.1 Ce que ce prototype N'EST PAS (honnêteté technique)
+### 2.1 Ce que la vertical slice EST — et N'EST PAS (honnêteté technique)
 
-- Pas de photoréalisme : les bâtiments sont des volumes texturés procéduralement, les personnages des humanoïdes stylisés à **proportions anatomiques réalistes** (tête ≈ 1/7,4, épaules larges, mains/pieds différenciés, visage discret). C'est la base saine, pas le produit final.
-- Aucun claim de "réaliste" au-delà de ce que le pipeline procédural permet. Le plan ci-dessous mène au réalisme.
+- **Humains rigged réels** chargés en glTF : avatar Ready Player Me (joueur), Michelle (PNJ♀), Soldier (PNJ♂) — skinning GPU, clips Idle/Walk/Run (Soldier), **retarget** mixamo→RPM vérifié headless (0 cible manquante).
+- Ce sont des assets de qualité « exemple de moteur », pas des MetaHuman : pas d'expressions faciales actives, pas de vêtements échangeables, 2 silhouettes PNJ de base (variées par échelle 1,58–1,85 m + teinte légère). Textures KHR embarquées (PBR métal/roughness).
+- Bâtiments : volumes + textures canvas procédurales — **le style n'est pas photoréaliste** ; seul l'intérieur du Fleuve est décoré (zellige, comptoir, enseigne…).
+- Le restaurant est une **salle parallèle** (x=1000, z=1000) : téléportation par la porte, collisions/rendu/lumières dédiées — pas de fenêtre sur rue, pas de découpe de façade.
+- Dialogue : moteur local déterministe (intentions, personnalité, affinité, humeur du jour) — bon et gratuit, mais pas une IA générative. L'IA générative est **prête mais non déployée** (clé dédiée requise).
+- Sauvegarde : **localStorage** (navigateur) — cloud Supabase (`saves`, `character_body`) prévu avec l'auth (RLS) ; aucun contournement de RLS n'est tenté.
 
-### 2.2 Chemin d'évolution vers le réalisme (sans réécriture)
+### 2.2 Chemin d'évolution vers le photoréalisme (sans réécriture)
 
-1. **Personnages** : la fabrique `createHumanoid()` expose `HumanoidRig` (groupe, pivots, membre par membre). Remplacer le contenu par des modèles glTF (Meshoid, morph targets) ne change ni `Player`, ni `NPC`, ni les collisions, ni la logique d'animation (les clips glTF piloteront les mêmes pivots via un mixer).
-2. **Bâtiments** : `generateBuildings()` produit des AABBs + specs. Un pack d'assets modulaire (Kitbash/Blender) remplacera les boîtes tout en gardant les colliders et les ancres.
-3. **Matériaux** : passer de `MeshStandardMaterial` seul à une stack PBR (albedo/normal/roughness en textures KHR), un `RoomEnvironment` en IBL, et du shadow mapping cascades (CSM) pour couvrir tout le monde.
-4. **Post-process** : EffectComposer — SSAO, bloom sélectif, tonemapping déjà ACESFilmic en place.
-5. **Streaming** : partitionner `cityData.ts` en tuiles (chunked world) quand la population dépassera ~10 k entités.
+1. **Personnages** : branches `RiggedKind = 'player' | 'female' | 'male'` déjà en place — swap des GLB (RPM API haute qualité, Fab/MetaHuman sous licence propre, pipeline `SkeletonUtils.clone` + `AnimationMixer` inchangé). Morphs corporels (poids/muscle) déjà appliqués sur les bones.
+2. **Expressions faciales** : morph targets présents sur le mesh RPM (Wolf3D_Head) — à piloter par l'humeur (fatigue, joie, colère) avec les émotions PNJ.
+3. **Bâtiments** : `generateBuildings()` produit des AABBs + specs. Un pack modulaire (ex. Quaternius CC0, ou kit Blender) remplacera les boîtes en gardant colliders et ancres.
+4. **Matériaux** : stack PBR complète (albedo/normal/roughness KHR), `RoomEnvironment` en IBL, shadow cascades (CSM).
+5. **Post-process** : EffectComposer — SSAO, bloom sélectif (déjà ACESFilmic).
+6. **Streaming** : tuiles (`cityData` partitionné) quand la population dépassera ~10 k entités.
 
 ## 3. Carte du code
 
@@ -39,7 +45,13 @@ src/
 ├── core/                  —— purs, testables (aucune API DOM/Three) ——
 │   ├── gameClock.ts       Jour 1, 08:00 ; 2 min de jeu / seconde réelle
 │   ├── collision.ts       Cercle vs AABB / cercle vs cercle / clamp monde
-│   └── mathUtils.ts       clamp, damp (exp), dampAngle (plus court arc), lerp
+│   ├── mathUtils.ts       clamp, damp (exp), dampAngle (plus court arc), lerp
+│   ├── simulation.ts      Simulation de vie : faim/énergie, calories→poids (7 700 kcal/kg),
+│   │                      morphologie (facteurs), formatMoney FCFA
+│   ├── saveGame.ts        Sauvegarde JSON versionnée (parse tolérant) — localStorage
+│   └── dialogueEngine.ts  Dialogue français libre : intentions par motif, réponse
+│                          composée (personnalité×affinité×humeur du jour), donne
+│                          le numéro au-delà de +25 d'affinité, invitation au-delà de +40
 ├── world/
 │   ├── cityData.ts        Source de vérité layout : routes, trottoirs, régions,
 │   │                      parc, ancres, génération déterministe (mulberry32),
@@ -50,10 +62,13 @@ src/
 │                          segmentés aux intersections + coins, bâtiments,
 │                          lampadaires, fontaine, bancs, arbres, arrêt de bus
 ├── entities/
-│   ├── humanoid.ts        Fabrique d'humanoïdes + animation procédurale
-│   │                      (marche/course/idle : hanches, genoux, épaules, coudes)
+│   ├── RiggedCharacter.ts Personnages glTF : GLTFLoader + SkeletonUtils.clone,
+│   │                      clips Idle/Walk/Run (retarget mixamo→RPM), damping
+│   │                      de poids d'action, posture assise procédurale,
+│   │                      morphs poids/muscle sur bones, dispose()
 │   ├── Player.ts          Déplacement caméra-relatif (ZQSD/WASD/flèches),
-│   │                      marche 3,15 m/s, course 5,5 m/s, collisions, yaw amorti
+│   │                      marche 3,15 m/s, course 5,5 m/s, collisions, yaw amorti,
+│   │                      bornes intérieures (restaurant) ou monde extérieur
 │   └── NPC.ts             Piétons : marche le long de trottoirs, virages aux
 │                          intersections, pauses, demi-tours, séparation douce
 ├── systems/
@@ -107,3 +122,28 @@ src/
 - Française pour le texte joueur (UI, toasts, documentation utilisateur) ; code et identifiants en anglais.
 - Modules à effet de bord (Three, DOM) isolés des modules purs testés.
 - Une étape à la fois ; jamais de merge vers `main` sans build + tests verts.
+
+
+## 9. La vertical slice « Le Fleuve » — flux complet
+
+```
+Porte (E) ─→ téléport intérieur (salle parallèle) ─→ Adama (serveur, PNJ)
+        │
+        ├─ E sur table → s'asseoir (posture assise procédurale, caméra suit)
+        ├─ Carte (E sur table assis) → choix plats → Commander
+        │     → assiettes générées sur la table (meshes), Adama apporte
+        ├─ Déguster → applyMeal() : faim/énergie/calories/poids (+ morphs osseux)
+        ├─ Payer l'addition → cash −= total, assiettes débarrassées, saveNow()
+        └─ Sortir (bloqué tant que l'addition n'est pas réglée) → retour ville
+```
+
+**Simulation** : faim/énergie dérivent avec les minutes de jeu (tickTime), 1 point de faim ≈ 40 min ; 7 700 kcal ≈ +1 kg.
+**Sauvegarde** : localStorage `citylife.save.v1` — stats + position (toujours dehors) + horloge + affinités + contacts. Auto à l'entrée/sortie de salle, après paiement, après partage de numéro, toutes les 45 s, au `beforeunload`.
+**Dialogue** : E sur un PNJ → panneau libre (français) → moteur local (ou IA si `VITE_DIALOGUE_ENDPOINT` pointe sur l'Edge Function déployée).
+
+## 10. Ce qui est consciemment encore un chantier (ne pas confondre avec un bug)
+
+- Superérette / Mali Fitness / bus / parc : **fermés** pour l'instant (toast honnête), pas des maquettes.
+- Adama (serveur) est un PNJ **client uniquement** (pas dans le seed Supabase — la DB ne sera pas migrée sans accord).
+- Edge Function `city-life-dialogue` présente dans le dépôt mais délibérément **non déployée** (clé d'IA dédiée requise ; aucune clé tierce n'est réutilisée).
+- Aucune vérification visuelle WebGL n'est possible dans le sandbox de l'agent (pas de navigateur) : le rendu se valide via la preview ; les tests headless couvrent logique + DOM + parsing GLB.
