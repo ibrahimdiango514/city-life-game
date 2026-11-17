@@ -32,6 +32,10 @@ export class HUD {
   private readonly locationEl: HTMLSpanElement
   private readonly supabaseEl: HTMLDivElement
   private readonly supabaseLabel: HTMLSpanElement
+  private readonly cashEl: HTMLDivElement
+  private readonly hungerEl: HTMLDivElement
+  private readonly energyEl: HTMLDivElement
+  private readonly saveEl: HTMLDivElement
 
   private toastTimer: ReturnType<typeof setTimeout> | null = null
   private lastPrompt: string | null = null
@@ -48,7 +52,7 @@ export class HUD {
       <header class="clg-topbar">
         <div class="clg-brand">
           <div class="clg-logo">CITY LIFE <em>GAME</em></div>
-          <div class="clg-stage">Étape 1 · Fondations — Centre-Ville</div>
+          <div class="clg-stage">Vertical slice · Centre-Ville — « Le Fleuve »</div>
           <div class="clg-location">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M12 21s7-5.4 7-11a7 7 0 1 0-14 0c0 5.6 7 11 7 11z" stroke="#ffd98a" stroke-width="1.6"/>
@@ -56,6 +60,18 @@ export class HUD {
             </svg>
             <span data-role="location">Centre-Ville</span>
           </div>
+        </div>
+        <div class="clg-life">
+          <div class="clg-cash" data-role="cash" title="Espèces">50 000 FCFA</div>
+          <div class="clg-bar" title="Faim">
+            <span class="clg-bar-icon">🍖</span>
+            <div class="clg-bar-track"><div class="clg-bar-fill clg-bar-hunger" data-role="hunger" style="width:82%"></div></div>
+          </div>
+          <div class="clg-bar" title="Énergie">
+            <span class="clg-bar-icon">⚡</span>
+            <div class="clg-bar-track"><div class="clg-bar-fill clg-bar-energy" data-role="energy" style="width:100%"></div></div>
+          </div>
+          <div class="clg-save" data-role="save" title="État de la sauvegarde">✓ Sauvegardé</div>
         </div>
         <div class="clg-status">
           <div class="clg-clock" data-role="clock">Jour 1 · 08:00 · Matin</div>
@@ -75,9 +91,9 @@ export class HUD {
 
       <div class="clg-overlay" data-role="overlay">
         <div class="clg-overlay-inner">
-          <div class="clg-kicker" data-role="kicker">Étape 1 — Fondations · Prototype jouable</div>
+          <div class="clg-kicker" data-role="kicker">Vertical slice · Centre-Ville — « Le Fleuve »</div>
           <h1 class="clg-title" data-role="title">CITY LIFE<br/><em>GAME</em></h1>
-          <p class="clg-tagline" data-role="tagline">Vivez une vraie vie au cœur de la ville.</p>
+          <p class="clg-tagline" data-role="tagline">Marche dans la ville, rencontre ses habitants, mange au Fleuve — vis ta vie.</p>
           <button class="clg-play" data-role="play" type="button">Cliquer pour jouer</button>
           <div class="clg-overlay-controls">
             <div class="row"><span class="clg-kbd">Z / W</span>+<span class="clg-kbd">Q / A</span>+<span class="clg-kbd">S</span>+<span class="clg-kbd">D</span> Marcher</div>
@@ -105,6 +121,10 @@ export class HUD {
     this.locationEl = this.mustFind('[data-role="location"]')
     this.supabaseEl = this.mustFind('[data-role="supabase"]')
     this.supabaseLabel = this.mustFind('[data-role="supabase-label"]')
+    this.cashEl = this.mustFind('[data-role="cash"]')
+    this.hungerEl = this.mustFind('[data-role="hunger"]')
+    this.energyEl = this.mustFind('[data-role="energy"]')
+    this.saveEl = this.mustFind('[data-role="save"]')
 
     this.playButton.addEventListener('click', () => {
       this.onPlayRequested?.()
@@ -115,6 +135,13 @@ export class HUD {
     const el = this.root.querySelector<T>(selector)
     if (!el) throw new Error(`HUD : élément introuvable (${selector})`)
     return el
+  }
+
+  /** Active / désactive l'attente du chargement (personnages 3D). */
+  setLoading(loading: boolean): void {
+    this.playButton.disabled = loading
+    this.playButton.textContent = loading ? 'Chargement des personnages…' : 'Cliquer pour jouer'
+    this.playButton.classList.toggle('is-loading', loading)
   }
 
   setPrompt(text: string | null): void {
@@ -158,6 +185,30 @@ export class HUD {
       status === 'connected' ? 'Supabase : connecté' : status === 'error' ? 'Supabase : erreur' : 'Supabase : non configuré'
   }
 
+  setMoney(label: string): void {
+    this.cashEl.textContent = label
+  }
+
+  setHunger(pct: number): void {
+    this.hungerEl.style.width = `${Math.max(0, Math.min(100, pct))}%`
+    this.hungerEl.classList.toggle('is-low', pct <= 22)
+  }
+
+  setEnergy(pct: number): void {
+    this.energyEl.style.width = `${Math.max(0, Math.min(100, pct))}%`
+    this.energyEl.classList.toggle('is-low', pct <= 18)
+  }
+
+  /** 'saving' | 'saved' | 'loaded' | 'unavailable' */
+  setSaveState(state: 'saving' | 'saved' | 'loaded' | 'unavailable'): void {
+    this.saveEl.classList.toggle('is-busy', state === 'saving')
+    this.saveEl.textContent =
+      state === 'saving' ? '… Sauvegarde' :
+      state === 'loaded' ? '✓ Partie chargée' :
+      state === 'unavailable' ? '⚠ Sauvegarde locale KO' :
+      '✓ Sauvegardé'
+  }
+
   setOverlay(mode: OverlayMode): void {
     if (mode === 'hidden') {
       this.overlay.classList.add('is-hidden')
@@ -165,7 +216,7 @@ export class HUD {
     }
     this.overlay.classList.remove('is-hidden')
     if (mode === 'start') {
-      this.overlayKicker.textContent = 'Étape 1 — Fondations · Prototype jouable'
+      this.overlayKicker.textContent = 'Vertical slice · Centre-Ville — « Le Fleuve »'
       this.title.innerHTML = 'CITY LIFE<br/><em>GAME</em>'
       this.tagline.textContent = 'Vivez une vraie vie au cœur de la ville.'
       this.playButton.textContent = 'Cliquer pour jouer'

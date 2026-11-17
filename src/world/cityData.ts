@@ -186,7 +186,7 @@ export function generateBuildings(): BuildingSpec[] {
   return buildings
 }
 
-export type InteractableType = 'shop' | 'restaurant' | 'gym' | 'transport' | 'park'
+export type InteractableType = 'shop' | 'restaurant' | 'gym' | 'transport' | 'park' | 'other'
 
 export interface InteractableSpec {
   id: string
@@ -204,22 +204,22 @@ export const INTERACTABLES: InteractableSpec[] = [
   {
     id: 'int-superette', type: 'shop', label: 'Entrer dans la Supérette « Chez Fatou »',
     x: 22, z: 8, radius: 2.4,
-    message: 'Supérette « Chez Fatou » — Commerces et achats arrivent à l’Étape 2 & 7. Pour l’instant, la caisse est fermée.',
+    message: 'Supérette « Chez Fatou » — Les courses arriveront dans une prochaine version. Pour l’instant, seul « Le Fleuve » est ouvert.',
   },
   {
     id: 'int-restaurant', type: 'restaurant', label: 'Entrer au restaurant « Le Fleuve »',
-    x: -20, z: -9, radius: 2.4,
-    message: 'Restaurant « Le Fleuve » — Le menu complet (et l’addition !) vous attendra à l’Étape 7.',
+    x: -20, z: -9, radius: 2.6,
+    message: '',
   },
   {
     id: 'int-gym', type: 'gym', label: 'Entrer à « Mali Fitness »',
     x: 34, z: -9, radius: 2.4,
-    message: 'Salle de sport « Mali Fitness » — La musculation et le suivi du corps arrivent avec l’Étape 2 & 7.',
+    message: 'Salle de sport « Mali Fitness » — Ouverture prochaine. Pour l’instant, seul « Le Fleuve » est ouvert.',
   },
   {
     id: 'int-bus', type: 'transport', label: 'Prendre le bus direction Gare Routière',
     x: 9, z: 9, radius: 2.6,
-    message: 'Arrêt de bus « Centre-Ville » — Le réseau bus / car / taxi arrive à l’Étape 6 (Ville & transports).',
+    message: 'Arrêt de bus « Centre-Ville » — Le réseau de transports arrive dans une prochaine version.',
   },
   {
     id: 'int-parc', type: 'park', label: 'Se reposer sous les arbres',

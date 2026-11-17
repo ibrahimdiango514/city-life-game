@@ -56,17 +56,3 @@ export function findPromptTarget(
 
   return best
 }
-
-/** Salutations affichées lors d'une tentative de conversation (placeholder Étape 3). */
-export function greetingFor(name: string): string {
-  const greetings = [
-    `« Salut, ça va ? »`,
-    `« Ah, bonsoir ! Vous cherchez quelque chose ? »`,
-    `« Bonjour. Belle journée, non ? »`,
-    `« Ça va, ça va… et vous-même ? »`,
-    `« Doucement avec le soleil, aujourd'hui. »`,
-  ]
-  const first = name.split(' ')[0]
-  const line = greetings[Math.floor(Math.random() * greetings.length)]
-  return `${first} : ${line}\n(Les dialogues intelligents arrivent à l'Étape 3 — IA, personnalité et émotions.)`
-}

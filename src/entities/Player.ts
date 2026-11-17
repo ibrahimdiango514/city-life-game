@@ -1,11 +1,11 @@
 /**
  * Player.ts — Personnage jouable : déplacement caméra-relatif (marche/course),
- * collisions monde, orientation amortie, animation du rig.
+ * collisions monde, orientation amortie, animation du rig glTF.
  */
 import * as THREE from 'three'
-import { animateHumanoid, type HumanoidRig } from './humanoid'
+import type { RiggedCharacter } from './RiggedCharacter'
 import { clampToWorld, resolveCircleVsAABB, type AABB } from '../core/collision'
-import { clamp, damp, dampAngle } from '../core/mathUtils'
+import { damp, dampAngle } from '../core/mathUtils'
 import { WORLD_HALF, groundHeightAt } from '../world/cityData'
 import type { Input } from '../systems/Input'
 
@@ -14,15 +14,19 @@ const RUN_SPEED = 5.5
 const PLAYER_RADIUS = 0.38
 
 export class Player {
-  readonly rig: HumanoidRig
+  readonly character: RiggedCharacter
   readonly group: THREE.Group
   private speed = 0
   private facing: number
-  private moveAmount = 0
+  private seated = false
+  /** Verrouille le déplacement (ex. panneau dialogue/menu ouvert). */
+  movementLocked = false
+  /** Limites intérieures (rect du monde) ou null = extérieur. */
+  interiorBounds: { minX: number; maxX: number; minZ: number; maxZ: number } | null = null
 
-  constructor(rig: HumanoidRig, spawn: { x: number; z: number; yaw: number }) {
-    this.rig = rig
-    this.group = rig.group
+  constructor(character: RiggedCharacter, spawn: { x: number; z: number; yaw: number }) {
+    this.character = character
+    this.group = character.group
     this.group.position.set(spawn.x, 0, spawn.z)
     this.facing = spawn.yaw
     this.group.rotation.y = spawn.yaw
@@ -40,25 +44,54 @@ export class Player {
     this.group.position.set(x, 0, z)
   }
 
-  update(dt: number, time: number, input: Input, cameraForward: { x: number; z: number }, colliders: AABB[]): void {
-    const fAxis = input.axisForward()
-    const rAxis = input.axisRight()
+  setPosition3D(x: number, y: number, z: number): void {
+    this.group.position.set(x, y, z)
+  }
 
-    // Droit = avant tourné de -90° sur le plan XZ.
-    const rx = -cameraForward.z
-    const rz = cameraForward.x
+  setYaw(yaw: number): void {
+    this.facing = yaw
+    this.group.rotation.y = yaw
+  }
 
-    let dx = cameraForward.x * fAxis + rx * rAxis
-    let dz = cameraForward.z * fAxis + rz * rAxis
-    const len = Math.hypot(dx, dz)
-    const moving = len > 0.001
-    if (moving) {
-      dx /= len
-      dz /= len
+  getYaw(): number {
+    return this.facing
+  }
+
+  setSeated(seated: boolean): void {
+    this.seated = seated
+  }
+
+  get isSeated(): boolean {
+    return this.seated
+  }
+
+  update(dt: number, input: Input, cameraForward: { x: number; z: number }, colliders: AABB[]): void {
+    let targetSpeed = 0
+    let dx = 0
+    let dz = 0
+    let moving = false
+
+    if (!this.movementLocked && !this.seated) {
+      const fAxis = input.axisForward()
+      const rAxis = input.axisRight()
+
+      // Droit = avant tourné de -90° sur le plan XZ.
+      const rx = -cameraForward.z
+      const rz = cameraForward.x
+
+      dx = cameraForward.x * fAxis + rx * rAxis
+      dz = cameraForward.z * fAxis + rz * rAxis
+      const len = Math.hypot(dx, dz)
+      moving = len > 0.001
+      if (moving) {
+        dx /= len
+        dz /= len
+      }
+
+      const run = moving && input.isRunDown()
+      targetSpeed = moving ? (run ? RUN_SPEED : WALK_SPEED) : 0
     }
 
-    const runBlendTarget = moving && input.isRunDown() ? 1 : 0
-    const targetSpeed = moving ? (runBlendTarget === 1 ? RUN_SPEED : WALK_SPEED) : 0
     this.speed = damp(this.speed, targetSpeed, 9, dt)
 
     if (moving && this.speed > 0.4) {
@@ -77,18 +110,17 @@ export class Player {
         nz = resolved.z
       }
     }
-    const clamped = clampToWorld({ x: nx, z: nz }, WORLD_HALF, PLAYER_RADIUS)
-    this.group.position.set(clamped.x, groundHeightAt(clamped.x, clamped.z), clamped.z)
+    if (this.interiorBounds) {
+      nx = Math.max(this.interiorBounds.minX, Math.min(this.interiorBounds.maxX, nx))
+      nz = Math.max(this.interiorBounds.minZ, Math.min(this.interiorBounds.maxZ, nz))
+      this.group.position.set(nx, 0, nz)
+    } else {
+      const clamped = clampToWorld({ x: nx, z: nz }, WORLD_HALF, PLAYER_RADIUS)
+      this.group.position.set(clamped.x, groundHeightAt(clamped.x, clamped.z), clamped.z)
+    }
 
-    const runBlend = this.speed > 0.1 ? clamp((this.speed - WALK_SPEED) / (RUN_SPEED - WALK_SPEED), 0, 1) : 0
-    this.moveAmount = damp(this.moveAmount, moving ? 1 : 0, 8, dt)
-
-    animateHumanoid(this.rig, {
-      speed: this.speed,
-      dt,
-      moving: this.moveAmount > 0.12 ? 1 : 0,
-      runBlend,
-      time,
-    })
+    this.character.setMovement(this.seated || this.movementLocked ? 0 : this.speed, dt)
+    this.character.setSeated(this.seated, dt)
+    this.character.update(dt)
   }
 }

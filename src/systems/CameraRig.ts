@@ -17,6 +17,11 @@ export class CameraRig {
     this.yaw = initialYaw
   }
 
+  /** Recalage instantané derrière la cible (téléportations — porte, sortie). */
+  snap(): void {
+    this.initialized = false
+  }
+
   /** Vecteur avant horizontal projeté de la caméra (pour orienter le déplacement). */
   forwardFlat(): { x: number; z: number } {
     return { x: -Math.sin(this.yaw), z: -Math.cos(this.yaw) }

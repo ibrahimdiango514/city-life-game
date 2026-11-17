@@ -281,3 +281,101 @@ export function busSignTexture(): THREE.CanvasTexture {
   tex.wrapT = THREE.ClampToEdgeWrapping
   return tex
 }
+
+/** Sol intérieur de restaurant : zellige chaud (carreaux crème/terre cuite). */
+export function restaurantFloorTexture(): THREE.CanvasTexture {
+  const S = 256
+  const [canvas, ctx] = makeCanvas(S)
+  const rng = mulberry32(19283746)
+  ctx.fillStyle = '#d8c9a3'
+  ctx.fillRect(0, 0, S, S)
+  const tile = 64
+  for (let y = 0; y < S; y += tile) {
+    for (let x = 0; x < S; x += tile) {
+      const even = ((x + y) / tile) % 2 === 0
+      ctx.fillStyle = even ? '#cbb586' : '#b98a5a'
+      ctx.fillRect(x, y, tile, tile)
+      ctx.strokeStyle = 'rgba(60,40,20,0.55)'
+      ctx.lineWidth = 4
+      ctx.strokeRect(x, y, tile, tile)
+      speckle(ctx, 1, 0, 0, rng) // no-op mais garde rng cohérent
+    }
+  }
+  return toTexture(canvas, 6, 6)
+}
+
+/** Mur intérieur : enduit clair avec soubassement. */
+export function restaurantWallTexture(): THREE.CanvasTexture {
+  const S = 256
+  const [canvas, ctx] = makeCanvas(S)
+  const rng = mulberry32(56473829)
+  ctx.fillStyle = '#e8dfc9'
+  ctx.fillRect(0, 0, S, S)
+  speckle(ctx, S, 700, 0.05, rng)
+  ctx.fillStyle = '#8a5a33'
+  ctx.fillRect(0, S - 40, S, 40) // soubassement bois
+  return toTexture(canvas, 4, 1.6)
+}
+
+/** Bois pour mobilier intérieur (tables, banquette). */
+export function woodTexture(): THREE.CanvasTexture {
+  const S = 256
+  const [canvas, ctx] = makeCanvas(S)
+  const rng = mulberry32(31241231)
+  ctx.fillStyle = '#6e4a2a'
+  ctx.fillRect(0, 0, S, S)
+  for (let y = 0; y < S; y += 7) {
+    ctx.strokeStyle = `rgba(30,18,8,${0.25 + rng() * 0.35})`
+    ctx.lineWidth = 2 + rng() * 2
+    ctx.beginPath()
+    ctx.moveTo(0, y + rng() * 3)
+    ctx.bezierCurveTo(S * 0.3, y + rng() * 6 - 3, S * 0.7, y + rng() * 6 - 3, S, y + rng() * 3)
+    ctx.stroke()
+  }
+  speckle(ctx, S, 300, 0.08, rng)
+  return toTexture(canvas)
+}
+
+/** Menu / ardoise murale avec le nom du restaurant. */
+export function menuBoardTexture(): THREE.CanvasTexture {
+  const [canvas, ctx] = makeCanvas(512, 384)
+  ctx.fillStyle = '#2b2b26'
+  ctx.fillRect(0, 0, 512, 384)
+  ctx.strokeStyle = '#c8a86b'
+  ctx.lineWidth = 14
+  ctx.strokeRect(10, 10, 492, 364)
+  ctx.fillStyle = '#e8d8b0'
+  ctx.textAlign = 'center'
+  ctx.font = 'bold 46px Georgia, serif'
+  ctx.fillText('LE FLEUVE', 256, 84)
+  ctx.font = '22px Georgia, serif'
+  ctx.fillStyle = '#c8a86b'
+  ctx.fillText('— Cuisine malienne & grillades —', 256, 128)
+  ctx.textAlign = 'left'
+  ctx.fillStyle = '#e8d8b0'
+  ctx.font = '26px Georgia, serif'
+  const lines = [
+    'Thiéboudienne ........ 3 500',
+    'Maffé poulet .......... 3 000',
+    'Yassa cuisinère ....... 2 500',
+    'Poulet bicyclette ...... 2 000',
+    'Jus de gingembre .......... 500',
+    'Eau minérale ............... 300',
+  ]
+  lines.forEach((l, i) => ctx.fillText(l, 56, 182 + i * 34))
+  return toTexture(canvas)
+}
+
+/** Nappe de table ronde (claire, bords colorés). */
+export function tableclothTexture(): THREE.CanvasTexture {
+  const S = 128
+  const [canvas, ctx] = makeCanvas(S)
+  const rng = mulberry32(77665544)
+  ctx.fillStyle = '#efe6d2'
+  ctx.fillRect(0, 0, S, S)
+  speckle(ctx, S, 200, 0.06, rng)
+  ctx.strokeStyle = '#8a2f2b'
+  ctx.lineWidth = 6
+  ctx.strokeRect(4, 4, S - 8, S - 8)
+  return toTexture(canvas)
+}

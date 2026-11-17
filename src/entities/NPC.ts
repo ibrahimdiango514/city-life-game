@@ -3,11 +3,10 @@
  *
  * Comportement piéton réaliste : déambulation sur les axes de trottoir,
  * pauses aléatoires, demi-tours aux extrémités, virages aux intersections,
- * séparation douce entre piétons. (Le cerveau social complet — routines,
- * travail, vie privée — arrive avec les Étapes 2+ ; ici ils « vivent » en marchant.)
+ * séparation douce entre piétons. Personnages : modèles humains glTF.
  */
 import * as THREE from 'three'
-import { animateHumanoid, createHumanoid, type HumanoidRig } from './humanoid'
+import type { RiggedCharacter, RiggedKind } from './RiggedCharacter'
 import { dampAngle, clamp } from '../core/mathUtils'
 import { SIDEWALK_LINES, groundHeightAt, type NpcSpawnSpec } from '../world/cityData'
 
@@ -15,7 +14,7 @@ const WALK_BOUNDS = 113
 
 export class NPC {
   readonly spec: NpcSpawnSpec
-  readonly rig: HumanoidRig
+  readonly character: RiggedCharacter
   readonly group: THREE.Group
   readonly fullName: string
   private axis: 'x' | 'z'
@@ -25,24 +24,14 @@ export class NPC {
   private speed: number
   private mode: 'walk' | 'pause'
   private pauseTimer = 0
-  private timeOffset: number
 
-  constructor(spec: NpcSpawnSpec) {
+  constructor(spec: NpcSpawnSpec, character: RiggedCharacter) {
     this.spec = spec
     this.fullName = `${spec.firstName} ${spec.lastName}`
-    this.rig = createHumanoid({
-      height: spec.height,
-      skin: spec.skin,
-      shirt: spec.shirt,
-      pants: spec.pants,
-      hair: spec.hair,
-      hairStyle: spec.hairStyle,
-      build: spec.gender === 'male' ? 1.06 + (spec.age % 5) * 0.02 : 0.94,
-    })
-    this.group = this.rig.group
+    this.character = character
+    this.group = this.character.group
     this.axis = spec.axis
     this.line = spec.line
-    this.timeOffset = Math.random() * 100
     this.speed = 1.05 + Math.random() * 0.45
 
     const startT = clamp(spec.t, -WALK_BOUNDS, WALK_BOUNDS)
@@ -93,7 +82,6 @@ export class NPC {
   /** Choisit la prochaine destination : même axe, ou virage à 90° si une intersection est proche. */
   private pickTarget(): void {
     const t = this.currentT()
-    // Intersection proche sur l'axe transversal ? (ex. on marche le long de z=8, on passe x=8)
     const nearPerpLine = SIDEWALK_LINES.find((l) => Math.abs(t - l) < 1.6)
 
     const wantTurn = Math.random() < 0.35 && nearPerpLine !== undefined
@@ -123,12 +111,13 @@ export class NPC {
     }
   }
 
-  update(dt: number, time: number): void {
+  update(dt: number): void {
     const t = this.currentT()
 
     if (this.mode === 'pause') {
       this.pauseTimer -= dt
-      animateHumanoid(this.rig, { speed: 0, dt, moving: 0, runBlend: 0, time: time + this.timeOffset })
+      this.character.setMovement(0, dt)
+      this.character.update(dt)
       if (this.pauseTimer <= 0) {
         this.pickTarget()
         this.mode = 'walk'
@@ -141,7 +130,8 @@ export class NPC {
     if (dist < 0.6) {
       this.mode = 'pause'
       this.pauseTimer = 1.6 + Math.random() * 3.6
-      animateHumanoid(this.rig, { speed: 0, dt, moving: 0, runBlend: 0, time: time + this.timeOffset })
+      this.character.setMovement(0, dt)
+      this.character.update(dt)
       return
     }
 
@@ -153,12 +143,11 @@ export class NPC {
     this.facing = dampAngle(this.facing, targetYaw, 8, dt)
     this.group.rotation.y = this.facing
 
-    animateHumanoid(this.rig, {
-      speed: this.speed,
-      dt,
-      moving: 1,
-      runBlend: 0,
-      time: time + this.timeOffset,
-    })
+    this.character.setMovement(this.speed, dt)
+    this.character.update(dt)
   }
+}
+
+export function npcRigKind(gender: 'female' | 'male'): RiggedKind {
+  return gender === 'female' ? 'female' : 'male'
 }
