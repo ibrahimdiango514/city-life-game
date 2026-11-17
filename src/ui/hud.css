@@ -1,0 +1,326 @@
+/* CITY LIFE GAME — HUD */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0b0d10;
+}
+#app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.clg-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  font-family: 'Helvetica Neue', Arial, system-ui, sans-serif;
+  color: #f3f0e9;
+  user-select: none;
+}
+
+.clg-root .clg-canvas-host {
+  position: absolute;
+  inset: 0;
+}
+
+.clg-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 52%, rgba(6, 8, 12, 0.42) 100%);
+  z-index: 5;
+}
+
+/* ---------- Crosshair ---------- */
+.clg-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.9), 0 0 1px #000;
+  z-index: 9;
+}
+
+/* ---------- Barre supérieure ---------- */
+.clg-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 14px 18px;
+  z-index: 10;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(8, 10, 14, 0.55), transparent);
+}
+
+.clg-brand { display: flex; flex-direction: column; gap: 3px; }
+
+.clg-logo {
+  font-family: 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 19px;
+  letter-spacing: 0.14em;
+  color: #f8f6ef;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+.clg-logo em { font-style: normal; color: #e6b654; }
+
+.clg-stage {
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(243, 240, 233, 0.62);
+}
+
+.clg-location {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: #ffd98a;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+.clg-location svg { opacity: 0.85; }
+
+.clg-status { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+
+.clg-clock {
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(10, 12, 16, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(6px);
+}
+
+.clg-supabase {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  color: rgba(243, 240, 233, 0.85);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(10, 12, 16, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(6px);
+  max-width: 340px;
+}
+.clg-supabase .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #fbbf24;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+.clg-supabase.is-connected .dot { background: #4ade80; }
+.clg-supabase.is-error .dot { background: #f87171; }
+.clg-supabase.is-unconfigured .dot { background: #fbbf24; }
+
+/* ---------- Aide contrôles ---------- */
+.clg-controls {
+  position: absolute;
+  bottom: 18px;
+  left: 18px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11.5px;
+  color: rgba(243, 240, 233, 0.82);
+  pointer-events: none;
+}
+.clg-controls .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(10, 12, 16, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 5px 10px;
+  border-radius: 7px;
+  width: max-content;
+  backdrop-filter: blur(4px);
+}
+.clg-kbd {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #ffe9b0;
+  border: 1px solid rgba(255, 233, 176, 0.4);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 2px 7px;
+  background: rgba(255, 233, 176, 0.07);
+  white-space: nowrap;
+}
+
+/* ---------- Prompt contextuel ---------- */
+.clg-prompt {
+  position: absolute;
+  bottom: 15%;
+  left: 50%;
+  transform: translate(-50%, 12px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: rgba(10, 12, 16, 0.72);
+  border: 1px solid rgba(230, 182, 84, 0.4);
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+  max-width: min(560px, 90vw);
+  text-align: left;
+}
+.clg-prompt.is-visible { opacity: 1; transform: translate(-50%, 0); }
+.clg-prompt .clg-kbd { font-size: 12px; }
+
+/* ---------- Toast ---------- */
+.clg-toast {
+  position: absolute;
+  bottom: 34%;
+  left: 50%;
+  transform: translate(-50%, 10px);
+  z-index: 11;
+  max-width: min(520px, 88vw);
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: rgba(16, 18, 24, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-left: 3px solid #e6b654;
+  font-size: 13.5px;
+  line-height: 1.5;
+  white-space: pre-line;
+  color: #f3f0e9;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+.clg-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- Overlay (menu de démarrage / pause) ---------- */
+.clg-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(230, 182, 84, 0.14), transparent 55%),
+    linear-gradient(160deg, rgba(7, 9, 13, 0.62) 0%, rgba(7, 9, 13, 0.82) 100%);
+  backdrop-filter: blur(2.5px);
+  transition: opacity 0.35s ease;
+}
+.clg-overlay.is-hidden { opacity: 0; pointer-events: none; }
+
+.clg-overlay-inner {
+  text-align: center;
+  max-width: 680px;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.clg-kicker {
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: #e6b654;
+  border: 1px solid rgba(230, 182, 84, 0.45);
+  border-radius: 999px;
+  padding: 6px 18px;
+  background: rgba(230, 182, 84, 0.08);
+}
+
+.clg-title {
+  margin: 0;
+  font-family: 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+  font-size: clamp(56px, 11vw, 108px);
+  line-height: 0.94;
+  letter-spacing: 0.06em;
+  color: #f8f6ef;
+  text-shadow: 0 6px 60px rgba(230, 182, 84, 0.22), 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+.clg-title em {
+  font-style: normal;
+  background: linear-gradient(180deg, #ffe9a8 0%, #e6b654 55%, #9a7430 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.clg-tagline {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: clamp(15px, 2.2vw, 19px);
+  color: rgba(243, 240, 233, 0.85);
+}
+
+.clg-play {
+  margin-top: 6px;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #120e06;
+  background: linear-gradient(180deg, #ffd977, #e6b654);
+  border: none;
+  border-radius: 10px;
+  padding: 16px 46px;
+  cursor: pointer;
+  box-shadow: 0 10px 34px rgba(230, 182, 84, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.clg-play:hover { transform: translateY(-2px); filter: brightness(1.06); box-shadow: 0 14px 44px rgba(230, 182, 84, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.7); }
+.clg-play:active { transform: translateY(0); }
+
+.clg-overlay-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, auto));
+  gap: 10px 26px;
+  font-size: 12px;
+  color: rgba(243, 240, 233, 0.75);
+  margin-top: 8px;
+}
+.clg-overlay-controls .row { display: flex; align-items: center; gap: 8px; justify-content: center; }
+
+.clg-disclaimer {
+  margin: 0;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: rgba(243, 240, 233, 0.42);
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .clg-controls { display: none; }
+  .clg-overlay-controls { grid-template-columns: repeat(2, auto); }
+  .clg-supabase { max-width: 200px; font-size: 9.5px; }
+}
